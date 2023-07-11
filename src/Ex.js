@@ -18,34 +18,25 @@ const NoteApp = ({ notes, addNote, editNote, deleteNote }) => {
     const [searchValue, setsearchValue] = useState('');
     const [error, setError] = useState('');
     const [isopenModal, setisopenModal] = useState('');
-    // const [setcurrentItem] = useState()
-    // const [dataSource, setdataSource] = useState(Array.from({ length: 10 }))
+    const [setcurrentItem] = useState()
+    const [dataSource, setdataSource] = useState(Array.from({ length: 10 }))
     const [hasMore, sethasMore] = useState(true);
-    const [currentArray, setcurrentArray] = useState([]);
 
 
-    const fetchMoreData = () => {
-        if (currentArray.length < notes.length) {
-            setTimeout(() => {
-                console.log("test push new values", currentArray)
-                let appendValues = notes.slice(currentArray.length - 1, ((currentArray.length - 1) + 10))
-                // setcurrentArray  
-                setcurrentArray((prevData) => [...prevData, ...appendValues]);
-            }, 1500);
-        } else {
-            sethasMore(false);
-        }
-    };
-    useEffect(() => {
-        if (notes.length > 0 && notes.length > 10) {
-            let splitArray = notes.slice(0, 10);
-            setcurrentArray(splitArray)
-        } else {
-            setcurrentArray(notes);
-        }
-    }, [])
-
-
+    // const fetchMoreData = () => {
+    //     if (dataSource.length < 100) {
+    //         setTimeout(() => {
+    //             const newData = Array.from({ length: 10 }).map((_, index) => ({
+    //                 id: new Date().getTime() + dataSource.length + index,
+    //                 title: `title ${dataSource.length + index}`,
+    //                 content: `content ${dataSource.length + index}`,
+    //             }));
+    //             setdataSource((prevData) => [...prevData, ...newData]);
+    //         }, 2000);
+    //     } else {
+    //         sethasMore(false);
+    //     }
+    // };
 
     // useEffect(() => {
     //     const initialData = Array.from({ length: 10 }).map((_, index) => ({
@@ -54,20 +45,20 @@ const NoteApp = ({ notes, addNote, editNote, deleteNote }) => {
     //         content: `content ${index + 1}`,
     //     }));
     //     setdataSource(initialData);
-    // }, []); //aa work kare che fix ma
+    // }, []);
 
-    // // 100 duplicate value add 
-    // useEffect(() => {
-    //     for (let i = 1; i <= 100; i++) {
-    //         const updatedNote = {
-    //             id: new Date().getTime(),
-    //             title: `title ${i}`,
-    //             content: `content ${i}`,
+    // 100 duplicate value add 
+    useEffect(() => {
+        for (let i = 1; i <= 100; i++) {
+            const updatedNote = {
+                id: new Date().getTime(),
+                title: `title ${i}`,
+                content: `content ${i}`,
 
-    //         };
-    //         // addNote(updatedNote);
-    //     }
-    // }, []) //
+            };
+            // addNote(updatedNote);
+        }
+    }, [])
 
     const handleAddNote = () => {
         if (title.trim() === '') {
@@ -221,9 +212,6 @@ const NoteApp = ({ notes, addNote, editNote, deleteNote }) => {
                                 onChange={handelSearchValue}
                                 placeholder='enter search title'
                             />
-                            <div className='adddetail'>
-                                <button onClick={handleClick}>+</button>
-                            </div>
                             <div className="note-actions ">
                                 <div className='filter-icon'>
                                     <GoFilter className='dropbtn' />
@@ -299,19 +287,18 @@ const NoteApp = ({ notes, addNote, editNote, deleteNote }) => {
                                 </div>
                             </div>
                         )}
-                        <InfiniteScroll
-                            dataLength={currentArray.length}
+                        {/* <InfiniteScroll
+                            dataLength={dataSource.length}
                             next={fetchMoreData}
                             hasMore={hasMore}
                             loader={<p>Loading...</p>}
                             endMessage={<p>You Are All Set !!</p>}
                         >
-                            {currentArray.map((item, index) => {
+                            {dataSource.map((item, index) => {
                                 return <div className="note" key={index} style={getBoxStyle(item?.id)}>
                                     <h3 className="note-title" >{index.title}</h3>
                                     <p className='name-content' dangerouslySetInnerHTML={{ __html: index.content }}></p>
                                     <div className="note-actions note-contain" >
-                                        <span>{index}</span>
                                         <button
                                             className="note-action-button edit-button"
                                             onClick={() => handleEditNote(item)}
@@ -327,8 +314,8 @@ const NoteApp = ({ notes, addNote, editNote, deleteNote }) => {
                                     </div>
                                 </div>
                             })}
-                        </InfiniteScroll>
-                        {/* <div className="note-list">
+                        </InfiniteScroll> */}
+                        <div className="note-list">
                             {currentItem.map((note, i) => (
                                 <div className="note" key={i} style={getBoxStyle(note?.id)}>
                                     <h3 className="note-title">{note.title}</h3>
@@ -349,8 +336,10 @@ const NoteApp = ({ notes, addNote, editNote, deleteNote }) => {
                                     </div>
                                 </div>
                             ))}
-                        </div> */}
-
+                        </div>
+                        <div className='adddetail'>
+                            <button onClick={handleClick}>+</button>
+                        </div>
                     </div>
                 </div>
             </div>

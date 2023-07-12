@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { connect } from 'react-redux';
 import './App.css'; // Import the CSS file for styling
@@ -5,69 +6,54 @@ import { GoFilter } from 'react-icons/go';
 import { MdModeEdit, MdDeleteForever } from 'react-icons/md';
 import 'quill/dist/quill.snow.css';
 import ReactQuill, { Quill } from 'react-quill';
-import InfiniteScroll from 'react-infinite-scroll-component';
+
 
 const NoteApp = ({ notes, addNote, editNote, deleteNote }) => {
-
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [editMode, setEditMode] = useState(false);
     const [editNoteId, setEditNoteId] = useState(null);
     const [sortAscending, setSortAscending] = useState(true);
-    const [sortDescending, setDescending] = useState(true);
-    const [searchValue, setsearchValue] = useState('');
+    const [sortDescending, setSortDescending] = useState(false);
+    const [searchValue, setSearchValue] = useState('');
     const [error, setError] = useState('');
     const [isopenModal, setisopenModal] = useState('');
-    // const [setcurrentItem] = useState()
-    // const [dataSource, setdataSource] = useState(Array.from({ length: 10 }))
-    const [hasMore, sethasMore] = useState(true);
-    const [currentArray, setcurrentArray] = useState([]);
+    const [currentArray, setCurrentArray] = useState([]);
+    const [startIndex, setStartIndex] = useState(0);
+    const [endIndex, setEndIndex] = useState(10);
+    const [isLoading, setIsLoading] = useState(false);
+    const [hasMore, setHasMore] = useState(true);
 
 
     const fetchMoreData = () => {
-        if (currentArray.length < notes.length) {
-            setTimeout(() => {
-                console.log("test push new values", currentArray)
-                let appendValues = notes.slice(currentArray.length - 1, ((currentArray.length - 1) + 10))
-                // setcurrentArray  
-                setcurrentArray((prevData) => [...prevData, ...appendValues]);
-            }, 1500);
-        } else {
-            sethasMore(false);
-        }
+        setIsLoading(true);
+
+        setTimeout(() => {
+            const nextEndIndex = currentArray.length + 10;
+            if (nextEndIndex >= notes.length) {
+                setHasMore(false);
+            }
+
+            const newData = notes.slice(currentArray.length, nextEndIndex);
+            setCurrentArray((prevData) => [...prevData, ...newData]);
+            setIsLoading(false);
+        }, 1500);
     };
+
     useEffect(() => {
-        if (notes.length > 0 && notes.length > 10) {
-            let splitArray = notes.slice(0, 10);
-            setcurrentArray(splitArray)
-        } else {
-            setcurrentArray(notes);
+        if (notes.length > 0) {
+            const initialData = notes.slice(1, 10);
+            setCurrentArray(initialData);
         }
-    }, [])
+    }, [notes]);
 
+    useEffect(() => {
+        window.addEventListener('scroll', handleScroll);
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+        };
+    }, []);
 
-
-    // useEffect(() => {
-    //     const initialData = Array.from({ length: 10 }).map((_, index) => ({
-    //         id: new Date().getTime() + index,
-    //         title: ` title ${index + 1}`,
-    //         content: `content ${index + 1}`,
-    //     }));
-    //     setdataSource(initialData);
-    // }, []); //aa work kare che fix ma
-
-    // // 100 duplicate value add 
-    // useEffect(() => {
-    //     for (let i = 1; i <= 100; i++) {
-    //         const updatedNote = {
-    //             id: new Date().getTime(),
-    //             title: `title ${i}`,
-    //             content: `content ${i}`,
-
-    //         };
-    //         // addNote(updatedNote);
-    //     }
-    // }, []) //
 
     const handleAddNote = () => {
         if (title.trim() === '') {
@@ -80,11 +66,10 @@ const NoteApp = ({ notes, addNote, editNote, deleteNote }) => {
             return;
         }
 
-        const newNote = { //add local storage
+        const newNote = {
             id: new Date().getTime(),
             title,
-            content: content.trim(), //update to state HTML content
-            // searchValue,
+            content: content.trim(),
         };
 
         addNote(newNote);
@@ -92,7 +77,7 @@ const NoteApp = ({ notes, addNote, editNote, deleteNote }) => {
         setContent('');
         handleCloseModal();
         setError('');
-        setsearchValue('');
+        setSearchValue('');
     };
 
     const handleEditNote = (note) => {
@@ -100,8 +85,9 @@ const NoteApp = ({ notes, addNote, editNote, deleteNote }) => {
         setEditNoteId(note.id);
         setTitle(note.title);
         setContent(note.content);
-        setisopenModal(true)
+        setisopenModal(true);
     };
+
     const handleUpdateNote = () => {
         if (title.trim() === '') {
             setError('Please enter a title');
@@ -127,7 +113,7 @@ const NoteApp = ({ notes, addNote, editNote, deleteNote }) => {
             setTitle('');
             setContent('');
             setError('');
-            setsearchValue('');
+            setSearchValue('');
             setisopenModal(false);
         }
     };
@@ -140,14 +126,39 @@ const NoteApp = ({ notes, addNote, editNote, deleteNote }) => {
     };
 
     const handleDeleteNote = (noteId) => {
-        if (window.confirm('Are you sure you want to delete this note ?')) {
+        if (window.confirm('Are you sure you want to delete this note?')) {
             deleteNote(noteId);
         }
     };
 
     const handleToggleSort = () => {
         setSortAscending(!sortAscending);
-        setDescending(!sortDescending)
+        setSortDescending(!sortDescending);
+
+        const sortedNotes = [...notes];
+        sortedNotes.sort((a, b) => {
+            if (sortAscending) {
+                if (typeof a.title === 'number' && typeof b.title === 'number') {
+                    return a.title - b.title; // Sort numbers in ascending order
+                }
+                if (typeof a.title === 'string' && typeof b.title === 'string') {
+                    return a.title.localeCompare(b.title); // Sort strings in alphabetical order
+                }
+            } else {
+                if (typeof a.title === 'number' && typeof b.title === 'number') {
+                    return b.title - a.title; // Sort numbers in descending order
+                }
+                if (typeof a.title === 'string' && typeof b.title === 'string') {
+                    return b.title.localeCompare(a.title); // Sort strings in reverse alphabetical order
+                }
+            }
+            return 0;
+        });
+
+        setStartIndex(0);
+        setEndIndex(10);
+        setCurrentArray(sortedNotes.slice(0, 10));
+        setHasMore(sortedNotes.length > 10);
     };
 
     const handleCloseModal = () => {
@@ -156,42 +167,34 @@ const NoteApp = ({ notes, addNote, editNote, deleteNote }) => {
         setisopenModal(false);
     };
 
-    const currentItem = [...notes]
-        .filter((note) => note.title.includes(searchValue))
-        .sort((a, b) => {
-            if (sortAscending) {
-                return (a.title) - (b.title);
-            } else {
-                return b.title.localeCompare(a.title);
-            }
-        })
-    useEffect(() => {
-        // setdataSource(currentItem);
-    }, [currentItem])
+    const handelsearchNote = (e) => {
+        setSearchValue(e.target.value);
+    };
+
+    const filterNotes = notes.filter((note) =>
+        note.title.toLowerCase().includes(searchValue.toLowerCase())
+    );
 
     const getBoxStyle = (date) => {
         const currentDate = new Date();
         const givenDate = new Date(date);
         if (currentDate.toDateString() === givenDate.toDateString()) {
-            return { backgroundColor: ' #0e7bff' };
+            return { backgroundColor: '#0e7bff' };
         } else if (givenDate > currentDate) {
             return { backgroundColor: 'rgba(0,122,255,.35)' };
         } else {
             return { backgroundColor: 'gray' };
         }
     };
-    const handelSearchValue = (e) => {
-        setsearchValue(e.target.value);
-    }
 
     const handleClick = () => {
         setisopenModal(true);
-    }
-    const handleCancel = () => {
-        setisopenModal(false)
-    }
+    };
 
-    //code of bold,itaic,
+    const handleCancel = () => {
+        setisopenModal(false);
+    };
+
     const quillRef = useRef(null);
     useEffect(() => {
         if (quillRef.current) {
@@ -202,41 +205,73 @@ const NoteApp = ({ notes, addNote, editNote, deleteNote }) => {
                     ['bold', 'italic', 'underline', 'strike'],
                 ],
             });
-            quill.on('text-chnage', (delta) => {
+            quill.on('text-change', (delta) => {
                 console.log('text changed', delta);
-            })
+            });
         }
     }, []);
+
+    // useEffect(() => {
+    //     for (let i = 1; i <= 100; i++) {
+    //         const updatedNote = {
+    //             id: new Date().getTime() + 1,
+    //             title: `title ${i}`,
+    //             content: `content ${i}`,
+    //         };
+    //         // addNote(updatedNote);
+    //     }
+    // }, []);
+
+    useEffect(() => {
+        window.addEventListener('scroll', handleScroll);
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+        };
+    }, []);
+
+    const handleScroll = () => {
+        if (
+            window.innerHeight + document.documentElement.scrollTop >=
+            document.documentElement.scrollHeight
+        ) {
+            if (!isLoading && hasMore) {
+                fetchMoreData();
+            }
+        }
+    };
+
 
     return (
         <>
             <div className='mainContent'>
                 <div className='Container'>
-                    <div className="note-app">
+                    <div className='note-app'>
                         <div className='U_flex'>
-                            <h1 className="note-app-title">Note App</h1>
-                            <input type="text"
+                            <h1 className='note-app-title'>Note App</h1>
+                            <input
+                                type='text'
                                 className='search'
                                 value={searchValue}
-                                onChange={handelSearchValue}
-                                placeholder='enter search title'
+                                onChange={handelsearchNote}
+                                placeholder='Enter search title'
                             />
                             <div className='adddetail'>
                                 <button onClick={handleClick}>+</button>
                             </div>
-                            <div className="note-actions ">
+                            <div className='note-actions'>
                                 <div className='filter-icon'>
                                     <GoFilter className='dropbtn' />
-                                    <div className="dropdown-content note-toggle-button">
-                                        <a href="#" onClick={() => handleToggleSort()}>Ascending</a>
-                                        <a href="#" onClick={() => handleToggleSort()}>Descending</a>
+                                    <div className='dropdown-content note-toggle-button'>
+                                        <a href='#' onClick={() => handleToggleSort()}>
+                                            {sortAscending ? 'Ascending' : 'Descending'}
+                                        </a>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         {isopenModal && (
                             <div className='modal'>
-                                <div className="note-form">
+                                <div className='note-form'>
                                     <div className='discription'>
                                         <form autoComplete='off'>
                                             <div className='u_content-header'>
@@ -245,8 +280,8 @@ const NoteApp = ({ notes, addNote, editNote, deleteNote }) => {
                                             <div className='u_col-4 u_mb-20'>
                                                 <div className='u_input'>
                                                     <input
-                                                        type="text"
-                                                        placeholder="Title"
+                                                        type='text'
+                                                        placeholder='Title'
                                                         value={title}
                                                         onChange={(e) => setTitle(e.target.value)}
                                                     />
@@ -259,7 +294,7 @@ const NoteApp = ({ notes, addNote, editNote, deleteNote }) => {
                                                     <div className='u_input u_ticket-edtor u_input-textarea'>
                                                         <ReactQuill
                                                             className='note-input'
-                                                            placeholder='content'
+                                                            placeholder='Content'
                                                             value={content}
                                                             onChange={setContent}
                                                             row={10}
@@ -269,27 +304,38 @@ const NoteApp = ({ notes, addNote, editNote, deleteNote }) => {
                                                             <span>*</span>
                                                         </label>
                                                     </div>
-                                                    {error && <p className="error-message">{error}</p>}
+                                                    {error && <p className='error-message'>{error}</p>}
                                                 </div>
                                             </div>
-                                            <div className='pagination'>
-                                            </div>
+                                            <div className='pagination'></div>
                                             {editMode ? (
                                                 <div className='u_flexButton'>
-                                                    <button className="u_btn u_text-c u_btn__smallBtn u_btn__blue" onClick={handleUpdateNote}>
+                                                    <button
+                                                        className='u_btn u_text-c u_btn__smallBtn u_btn__blue'
+                                                        onClick={handleUpdateNote}
+                                                    >
                                                         Update
                                                     </button>
 
-                                                    <button className="u_btn u_text-c u_btn__smallBtn  u_ml-10 u_btn__white" onClick={handleCancelEdit}>
+                                                    <button
+                                                        className='u_btn u_text-c u_btn__smallBtn  u_ml-10 u_btn__white'
+                                                        onClick={handleCancelEdit}
+                                                    >
                                                         Cancel
                                                     </button>
                                                 </div>
                                             ) : (
                                                 <div className='u_flexButton'>
-                                                    <button className="u_btn u_text-c u_btn__smallBtn  u_btn__blue" onClick={handleAddNote}>
-                                                        save
+                                                    <button
+                                                        className='u_btn u_text-c u_btn__smallBtn  u_btn__blue'
+                                                        onClick={handleAddNote}
+                                                    >
+                                                        Save
                                                     </button>
-                                                    <button className="u_btn u_text-c u_btn__smallBtn u_ml-10 u_btn__white" onClick={handleCancel}>
+                                                    <button
+                                                        className='u_btn u_text-c u_btn__smallBtn u_ml-10 u_btn__white'
+                                                        onClick={handleCancel}
+                                                    >
                                                         Cancel
                                                     </button>
                                                 </div>
@@ -299,71 +345,54 @@ const NoteApp = ({ notes, addNote, editNote, deleteNote }) => {
                                 </div>
                             </div>
                         )}
-                        <InfiniteScroll
-                            dataLength={currentArray.length}
-                            next={fetchMoreData}
-                            hasMore={hasMore}
-                            loader={<p>Loading...</p>}
-                            endMessage={<p>You Are All Set !!</p>}
-                        >
-                            {currentArray.map((item, index) => {
-                                return <div className="note" key={index} style={getBoxStyle(item?.id)}>
-                                    <h3 className="note-title" >{index.title}</h3>
-                                    <p className='name-content' dangerouslySetInnerHTML={{ __html: index.content }}></p>
-                                    <div className="note-actions note-contain" >
-                                        <span>{index}</span>
-                                        <button
-                                            className="note-action-button edit-button"
-                                            onClick={() => handleEditNote(item)}
-                                        >
-                                            <MdModeEdit />
-                                        </button>
-                                        <button
-                                            className="note-action-button delete-button"
-                                            onClick={() => handleDeleteNote(item.id)}
-                                        >
-                                            <MdDeleteForever />
-                                        </button>
-                                    </div>
+                        {
+                            currentArray.length === 0 ? (
+                                <div className="no-data">
+                                    < img src='https://d33v4339jhl8k0.cloudfront.net/docs/assets/5923ee3b0428634b4a335ad3/images/6155931c0754e74465f15374/file-H8yxR163MF.png' alt="No Data" />
+                                    <p>No data found</p>
                                 </div>
-                            })}
-                        </InfiniteScroll>
-                        {/* <div className="note-list">
-                            {currentItem.map((note, i) => (
-                                <div className="note" key={i} style={getBoxStyle(note?.id)}>
-                                    <h3 className="note-title">{note.title}</h3>
-                                    <p className='name-content' dangerouslySetInnerHTML={{ __html: note.content }}></p>
-                                    <div className="note-actions note-contain">
-                                        <button
-                                            className="note-action-button edit-button"
-                                            onClick={() => handleEditNote(note)}
-                                        >
-                                            <MdModeEdit />
-                                        </button>
-                                        <button
-                                            className="note-action-button delete-button"
-                                            onClick={() => handleDeleteNote(note.id)}
-                                        >
-                                            <MdDeleteForever />
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div> */}
-
+                            ) :
+                                currentArray.map((item, index) => {
+                                    return (
+                                        <div className='note' key={index} style={getBoxStyle(item?.id)}>
+                                            <h3 className='note-title'>{item.title}</h3>
+                                            <p
+                                                className='name-content'
+                                                dangerouslySetInnerHTML={{ __html: item.content }}
+                                            ></p>
+                                            <div className='note-actions note-contain'>
+                                                <span>{index}</span>
+                                                <button
+                                                    className='note-action-button edit-button'
+                                                    onClick={() => handleEditNote(item)}
+                                                >
+                                                    <MdModeEdit />
+                                                </button>
+                                                <button
+                                                    className='note-action-button delete-button'
+                                                    onClick={() => handleDeleteNote(item.id)}
+                                                >
+                                                    <MdDeleteForever />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                        {isLoading && (
+                            <div className='loading-message'>Loading...</div>
+                        )}
                     </div>
                 </div>
             </div>
         </>
     );
 };
-//mapstatetoprops ni evry time state chnage thai data save thai state ma ane reatun ma object ape..
-const mapStateToProps = (state) => ({  //provide the store data to your component, called evry time store state chaanges should retrun object data
+
+const mapStateToProps = (state) => ({
     notes: state.notes,
 });
-// /If your mapDispatchToProps is declared as a function taking one parameter, it will be given the dispatch of your store.
-//mapdispatchtoprops te ek function che..tene ek var create krine called karvama ave che ane recive dispatch karshe..will return of object
-const mapDispatchToProps = (dispatch) => ({ // provide the action creators as props to your component. fucntion athva object hoi shake..
+
+const mapDispatchToProps = (dispatch) => ({
     addNote: (note) => dispatch({ type: 'ADD_NOTE', payload: note }),
     editNote: (note) => dispatch({ type: 'EDIT_NOTE', payload: note }),
     deleteNote: (noteId) => dispatch({ type: 'DELETE_NOTE', payload: noteId }),

@@ -6,6 +6,7 @@ import { GoFilter } from 'react-icons/go';
 import { MdModeEdit, MdDeleteForever } from 'react-icons/md';
 import 'quill/dist/quill.snow.css';
 import ReactQuill, { Quill } from 'react-quill';
+// import logo from './noData.svg'
 
 
 const NoteApp = ({ notes, addNote, editNote, deleteNote }) => {
@@ -13,47 +14,58 @@ const NoteApp = ({ notes, addNote, editNote, deleteNote }) => {
     const [content, setContent] = useState('');
     const [editMode, setEditMode] = useState(false);
     const [editNoteId, setEditNoteId] = useState(null);
-    const [sortAscending, setSortAscending] = useState(true);
-    const [sortDescending, setSortDescending] = useState(false);
     const [searchValue, setSearchValue] = useState('');
     const [error, setError] = useState('');
     const [isopenModal, setisopenModal] = useState('');
     const [currentArray, setCurrentArray] = useState([]);
-    const [startIndex, setStartIndex] = useState(0);
-    const [endIndex, setEndIndex] = useState(10);
     const [isLoading, setIsLoading] = useState(false);
     const [hasMore, setHasMore] = useState(true);
-
+    const [sortOrder, setSortOrder] = useState('ascending');
 
     const fetchMoreData = () => {
-        setIsLoading(true);
+        if (currentArray.length < notes.length) {
+            setTimeout(() => {
+                let appendValues = notes.slice(
+                    currentArray.length,
+                    currentArray.length + 10
+                );
 
-        setTimeout(() => {
-            const nextEndIndex = currentArray.length + 10;
-            if (nextEndIndex >= notes.length) {
-                setHasMore(false);
-            }
-
-            const newData = notes.slice(currentArray.length, nextEndIndex);
-            setCurrentArray((prevData) => [...prevData, ...newData]);
-            setIsLoading(false);
-        }, 1500);
+                if (sortOrder === 'descending') {
+                    appendValues = appendValues.reverse();
+                }
+                setCurrentArray((prevData) => [...prevData, ...appendValues]);
+            }, 1500);
+        } else {
+            setHasMore(false); // load  note na hoi to false set karvama ave
+        }
     };
+    const handleClick = () => {
+        setisopenModal(true);
+        setSortOrder('ascending');
+    };
+
+
 
     useEffect(() => {
         if (notes.length > 0) {
-            const initialData = notes.slice(1, 10);
-            setCurrentArray(initialData);
+            let splitArray = notes.slice(0, 10);
+
+            if (sortOrder === 'descending') {
+                splitArray = splitArray.reverse();
+            }
+
+            setCurrentArray(splitArray);
+        } else {
+            setCurrentArray(notes);
         }
-    }, [notes]);
+    }, [notes, sortOrder]);
 
     useEffect(() => {
         window.addEventListener('scroll', handleScroll);
         return () => {
             window.removeEventListener('scroll', handleScroll);
         };
-    }, []);
-
+    }, [currentArray]);
 
     const handleAddNote = () => {
         if (title.trim() === '') {
@@ -131,36 +143,6 @@ const NoteApp = ({ notes, addNote, editNote, deleteNote }) => {
         }
     };
 
-    const handleToggleSort = () => {
-        setSortAscending(!sortAscending);
-        setSortDescending(!sortDescending);
-
-        const sortedNotes = [...notes];
-        sortedNotes.sort((a, b) => {
-            if (sortAscending) {
-                if (typeof a.title === 'number' && typeof b.title === 'number') {
-                    return a.title - b.title; // Sort numbers in ascending order
-                }
-                if (typeof a.title === 'string' && typeof b.title === 'string') {
-                    return a.title.localeCompare(b.title); // Sort strings in alphabetical order
-                }
-            } else {
-                if (typeof a.title === 'number' && typeof b.title === 'number') {
-                    return b.title - a.title; // Sort numbers in descending order
-                }
-                if (typeof a.title === 'string' && typeof b.title === 'string') {
-                    return b.title.localeCompare(a.title); // Sort strings in reverse alphabetical order
-                }
-            }
-            return 0;
-        });
-
-        setStartIndex(0);
-        setEndIndex(10);
-        setCurrentArray(sortedNotes.slice(0, 10));
-        setHasMore(sortedNotes.length > 10);
-    };
-
     const handleCloseModal = () => {
         setTitle('');
         setContent('');
@@ -170,11 +152,6 @@ const NoteApp = ({ notes, addNote, editNote, deleteNote }) => {
     const handelsearchNote = (e) => {
         setSearchValue(e.target.value);
     };
-
-    const filterNotes = notes.filter((note) =>
-        note.title.toLowerCase().includes(searchValue.toLowerCase())
-    );
-
     const getBoxStyle = (date) => {
         const currentDate = new Date();
         const givenDate = new Date(date);
@@ -187,9 +164,9 @@ const NoteApp = ({ notes, addNote, editNote, deleteNote }) => {
         }
     };
 
-    const handleClick = () => {
-        setisopenModal(true);
-    };
+    // const handleClick = () => {
+    //     setisopenModal(true);
+    // };
 
     const handleCancel = () => {
         setisopenModal(false);
@@ -211,16 +188,16 @@ const NoteApp = ({ notes, addNote, editNote, deleteNote }) => {
         }
     }, []);
 
-    // useEffect(() => {
-    //     for (let i = 1; i <= 100; i++) {
-    //         const updatedNote = {
-    //             id: new Date().getTime() + 1,
-    //             title: `title ${i}`,
-    //             content: `content ${i}`,
-    //         };
-    //         // addNote(updatedNote);
-    //     }
-    // }, []);
+    useEffect(() => {
+        for (let i = 1; i <= 100; i++) {
+            const updatedNote = {
+                id: new Date().getTime(),
+                title: `title ${i}`,
+                content: `content ${i}`,
+            };
+            // addNote(updatedNote);
+        }
+    }, []);
 
     useEffect(() => {
         window.addEventListener('scroll', handleScroll);
@@ -236,10 +213,10 @@ const NoteApp = ({ notes, addNote, editNote, deleteNote }) => {
         ) {
             if (!isLoading && hasMore) {
                 fetchMoreData();
+                setIsLoading(false);
             }
         }
     };
-
 
     return (
         <>
@@ -262,9 +239,10 @@ const NoteApp = ({ notes, addNote, editNote, deleteNote }) => {
                                 <div className='filter-icon'>
                                     <GoFilter className='dropbtn' />
                                     <div className='dropdown-content note-toggle-button'>
-                                        <a href='#' onClick={() => handleToggleSort()}>
-                                            {sortAscending ? 'Ascending' : 'Descending'}
-                                        </a>
+                                        <div className="dropdown-content note-toggle-button">
+                                            <a href="#" onClick={() => setSortOrder('ascending')}>Ascending</a>
+                                            <a href="#" onClick={() => setSortOrder('descending')}>Descending</a>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -345,39 +323,45 @@ const NoteApp = ({ notes, addNote, editNote, deleteNote }) => {
                                 </div>
                             </div>
                         )}
-                        {
-                            currentArray.length === 0 ? (
-                                <div className="no-data">
-                                    < img src='https://d33v4339jhl8k0.cloudfront.net/docs/assets/5923ee3b0428634b4a335ad3/images/6155931c0754e74465f15374/file-H8yxR163MF.png' alt="No Data" />
-                                    <p>No data found</p>
-                                </div>
-                            ) :
-                                currentArray.map((item, index) => {
-                                    return (
-                                        <div className='note' key={index} style={getBoxStyle(item?.id)}>
-                                            <h3 className='note-title'>{item.title}</h3>
-                                            <p
-                                                className='name-content'
-                                                dangerouslySetInnerHTML={{ __html: item.content }}
-                                            ></p>
-                                            <div className='note-actions note-contain'>
-                                                <span>{index}</span>
-                                                <button
-                                                    className='note-action-button edit-button'
-                                                    onClick={() => handleEditNote(item)}
-                                                >
-                                                    <MdModeEdit />
-                                                </button>
-                                                <button
-                                                    className='note-action-button delete-button'
-                                                    onClick={() => handleDeleteNote(item.id)}
-                                                >
-                                                    <MdDeleteForever />
-                                                </button>
-                                            </div>
+                        <div className='scroll'>
+                            <div className='flexBoxes'>
+                                {
+                                    currentArray.length === 0 ? (
+                                        <div className="no-data">
+                                            {/* < img src={logo} alt="No Data" /> */}
+                                            <p>No data found</p>
                                         </div>
-                                    );
-                                })}
+                                    ) :
+                                        currentArray.map((item, index) => {
+                                            if (item.title.toLowerCase().includes(searchValue.toLowerCase())) {
+                                                return (
+                                                    <div className='note' key={index} style={getBoxStyle(item?.id)}>
+                                                        <h3 className='note-title'>{item.title}</h3>
+                                                        <p
+                                                            className='name-content'
+                                                            dangerouslySetInnerHTML={{ __html: item.content }}
+                                                        ></p>
+                                                        <div className='note-actions note-contain'>
+                                                            <button
+                                                                className='note-action-button edit-button'
+                                                                onClick={() => handleEditNote(item)}
+                                                            >
+                                                                <MdModeEdit />
+                                                            </button>
+                                                            <button
+                                                                className='note-action-button delete-button'
+                                                                onClick={() => handleDeleteNote(item.id)}
+                                                            >
+                                                                <MdDeleteForever />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            }
+                                            return null; // Return null if the item does not match the search criteria
+                                        })}
+                            </div>
+                        </div>
                         {isLoading && (
                             <div className='loading-message'>Loading...</div>
                         )}
